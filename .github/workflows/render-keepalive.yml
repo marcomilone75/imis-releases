@@ -1,0 +1,33 @@
+name: Render Keep-Alive
+
+# Prevent the IMIS NestJS backend on Render (free plan) from spinning down
+# after 15 minutes of inactivity. Cold start measured at ~42 seconds, which
+# is unacceptable for the Electron app's startup UX — the cron keeps the
+# instance warm so users see sub-second response times.
+#
+# This workflow lives in the PUBLIC imis-releases repo because public repos
+# get UNLIMITED GitHub Actions minutes, while the private imis repo only
+# has 2000 min/month — ~3600 pings/month would eat the whole budget.
+#
+# Schedule: every 12 minutes, 24/7. GitHub Actions cron is not exact and
+# can drift 5-10 minutes during peaks, so 12-min interval gives margin
+# against Render's 15-minute idle timeout.
+
+on:
+  schedule:
+    - cron: '*/12 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render /api/health
+        run: |
+          URL="https://imis-backend-wlok.onrender.com/api/health"
+          code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 120 "$URL")
+          echo "HTTP $code from $URL"
+          if [ "$code" != "200" ]; then
+            echo "::error::Render health check returned $code, expected 200"
+            exit 1
+          fi
