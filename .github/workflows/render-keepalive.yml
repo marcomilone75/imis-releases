@@ -1,21 +1,22 @@
 name: Render Keep-Alive
 
-# Prevent the IMIS NestJS backend on Render (free plan) from spinning down
-# after 15 minutes of inactivity. Cold start measured at ~42 seconds, which
-# is unacceptable for the Electron app's startup UX — the cron keeps the
-# instance warm so users see sub-second response times.
+# Backup pinger for the IMIS NestJS backend on Render (free plan).
 #
-# This workflow lives in the PUBLIC imis-releases repo because public repos
-# get UNLIMITED GitHub Actions minutes, while the private imis repo only
-# has 2000 min/month — ~3600 pings/month would eat the whole budget.
+# The PRIMARY keep-alive is UptimeRobot (account marcomilone75@gmail.com),
+# which hits /api/health every 5 minutes. GitHub Actions cron is NOT reliable
+# for this job: high-frequency schedules on free repos get throttled to one
+# run every ~2-3 hours, so a */12 cron never actually kept Render warm.
 #
-# Schedule: every 12 minutes, 24/7. GitHub Actions cron is not exact and
-# can drift 5-10 minutes during peaks, so 12-min interval gives margin
-# against Render's 15-minute idle timeout.
+# This workflow stays as a cheap secondary check. "All jobs were cancelled"
+# emails with the annotation "job was not acquired by Runner" are a GitHub
+# runner shortage, not a bug here.
+#
+# Lives in the PUBLIC imis-releases repo because public repos get unlimited
+# Actions minutes.
 
 on:
   schedule:
-    - cron: '*/12 * * * *'
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 jobs:
